@@ -17,5 +17,6 @@ class VehicleRegistrationSerializer(
             "user",
             "status",
             "reviewed_at",
-            "submitted_at"
+            "submitted_at",
+            "cross_validation_warnings",
         ]

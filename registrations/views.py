@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
 from registrations.models import VehicleRegistration
-from registrations.services import validate_registration
+from registrations.services import validate_registration, cross_validate_documents
 from registrations.serializers import VehicleRegistrationSerializer
 
 from vehicles.models import Vehicle
@@ -43,9 +43,12 @@ class RegistrationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        warnings = cross_validate_documents(request.user, vehicle)
+
         registration = VehicleRegistration.objects.create(
             user=request.user,
-            vehicle=vehicle
+            vehicle=vehicle,
+            cross_validation_warnings=warnings
         )
 
         return Response(
