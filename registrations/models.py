@@ -35,6 +35,11 @@ class VehicleRegistration(models.Model):
         null=True
     )
 
+    cross_validation_warnings = models.JSONField(
+        default=list,
+        blank=True
+    )
+
     submitted_at = models.DateTimeField(
         auto_now_add=True
     )
