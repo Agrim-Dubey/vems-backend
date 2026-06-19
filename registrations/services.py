@@ -8,21 +8,19 @@ REQUIRED_DOCUMENTS = ["RC", "DL", "COLLEGE_ID"]
 
 def validate_registration(user):
 
-    documents = UserDocument.objects.filter(user=user)
-
-    uploaded_types = list(
-        documents.values_list("document_type", flat=True)
-    )
-
-    for doc_type in REQUIRED_DOCUMENTS:
-        if doc_type not in uploaded_types:
-            return False, f"{doc_type} document missing"
-
-    failed_or_pending = documents.exclude(ocr_status="COMPLETED")
-    if failed_or_pending.exists():
-        return False, "One or more documents have not completed OCR processing"
-
     if not Vehicle.objects.filter(user=user).exists():
         return False, "No vehicle registered"
+
+    for doc_type in REQUIRED_DOCUMENTS:
+        latest = UserDocument.objects.filter(
+            user=user,
+            document_type=doc_type
+        ).order_by("-uploaded_at").first()
+
+        if not latest:
+            return False, f"{doc_type} document missing"
+
+        if latest.ocr_status != "COMPLETED":
+            return False, f"{doc_type} OCR not completed — please re-upload a clearer image"
 
     return True, "Validation successful"
