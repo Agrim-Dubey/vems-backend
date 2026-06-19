@@ -5,47 +5,27 @@ from accounts.models import User
 
 class UserProfile(models.Model):
 
-    class Gender(models.TextChoices):
-        MALE = "MALE", "Male"
-        FEMALE = "FEMALE", "Female"
-        OTHER = "OTHER", "Other"
-
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
         related_name="profile"
     )
 
-    full_name = models.CharField(max_length=255)
+    first_name = models.CharField(max_length=150)
 
-    student_id = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=150)
 
-    phone_number = models.CharField(max_length=15)
+    student_number = models.CharField(max_length=50, unique=True)
 
-    department = models.CharField(max_length=100)
-
-    year = models.IntegerField()
-
-    gender = models.CharField(
-        max_length=20,
-        choices=Gender.choices
-    )
-
-    hostel_name = models.CharField(
-        max_length=100,
+    photo = models.ImageField(
+        upload_to="profile_photos/",
         blank=True,
         null=True
     )
 
-    is_profile_completed = models.BooleanField(
-        default=False
-    )
+    is_profile_completed = models.BooleanField(default=False)
 
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
-    updated_at = models.DateTimeField(
-        auto_now=True
-    )
+    updated_at = models.DateTimeField(auto_now=True)
 
