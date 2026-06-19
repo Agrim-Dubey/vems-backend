@@ -20,11 +20,13 @@ class UserDocument(models.Model):
         PROCESSING = "PROCESSING", "Processing"
         COMPLETED = "COMPLETED", "Completed"
         FAILED = "FAILED", "Failed"
+
     ocr_status = models.CharField(
-    max_length=20,
-    choices=OCRStatus.choices,
-    default=OCRStatus.PENDING
-)
+        max_length=20,
+        choices=OCRStatus.choices,
+        default=OCRStatus.PENDING
+    )
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
