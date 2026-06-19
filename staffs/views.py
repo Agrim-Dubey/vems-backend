@@ -1,4 +1,5 @@
 from django.utils import timezone
+from django.core.mail import send_mail
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -116,6 +117,21 @@ class ApproveRegistrationView(APIView):
         registration.reviewed_at = timezone.now()
         registration.save()
 
+        send_mail(
+            subject="VEMS — Vehicle Registration Approved",
+            message=(
+                f"Dear {registration.vehicle.owner_name},\n\n"
+                f"Your vehicle registration has been approved.\n\n"
+                f"Vehicle Number: {registration.vehicle.vehicle_number}\n"
+                f"Vehicle: {registration.vehicle.vehicle_model} ({registration.vehicle.vehicle_color})\n\n"
+                f"You can now bring your vehicle to the campus.\n\n"
+                f"— AKGEC Vehicle Entry Management System"
+            ),
+            from_email=None,
+            recipient_list=[registration.user.email],
+            fail_silently=True,
+        )
+
         return Response({"message": "Registration approved"})
 
 
@@ -141,5 +157,20 @@ class RejectRegistrationView(APIView):
         registration.rejection_reason = reason
         registration.reviewed_at = timezone.now()
         registration.save()
+
+        send_mail(
+            subject="VEMS — Vehicle Registration Rejected",
+            message=(
+                f"Dear {registration.vehicle.owner_name},\n\n"
+                f"Your vehicle registration has been rejected.\n\n"
+                f"Vehicle Number: {registration.vehicle.vehicle_number}\n"
+                f"Reason: {reason or 'No reason provided'}\n\n"
+                f"Please re-submit with the correct documents or contact the admin for assistance.\n\n"
+                f"— AKGEC Vehicle Entry Management System"
+            ),
+            from_email=None,
+            recipient_list=[registration.user.email],
+            fail_silently=True,
+        )
 
         return Response({"message": "Registration rejected"})
