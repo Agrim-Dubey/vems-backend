@@ -1,5 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
 from users.models import UserProfile
@@ -12,36 +13,28 @@ class ProfileView(APIView):
 
     def get(self, request):
 
-        profile = UserProfile.objects.filter(
-            user=request.user
-        ).first()
+        profile = UserProfile.objects.filter(user=request.user).first()
 
         if not profile:
-            return Response({
-                "message": "Profile not found"
-            })
+            return Response(
+                {"message": "Profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
-        serializer = UserProfileSerializer(profile)
-
-        return Response(serializer.data)
+        return Response(UserProfileSerializer(profile).data)
 
     def post(self, request):
 
-        profile = UserProfile.objects.filter(
-            user=request.user
-        ).first()
+        profile = UserProfile.objects.filter(user=request.user).first()
 
         serializer = UserProfileSerializer(
             profile,
             data=request.data,
-            partial=True
+            partial=bool(profile),
         )
 
         serializer.is_valid(raise_exception=True)
 
-        serializer.save(
-            user=request.user,
-            is_profile_completed=True
-        )
+        serializer.save(user=request.user, is_profile_completed=True)
 
         return Response(serializer.data)
