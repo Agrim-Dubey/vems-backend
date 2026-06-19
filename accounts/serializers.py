@@ -10,7 +10,7 @@ class RegisterSerializer(serializers.Serializer):
 
     def validate_email(self, value):
 
-        pattern = r'^[a-zA-Z0-9._%+-]+@akgec\.in$'
+        pattern = r'^[a-zA-Z0-9._%+-]+@akgec\.ac\.in$'
 
         if not re.match(pattern, value):
             raise serializers.ValidationError("Invalid college email")

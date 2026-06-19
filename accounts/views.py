@@ -1,12 +1,16 @@
+import jwt
+import os
+import datetime
+
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 from accounts.utils import (
     generate_otp,
     generate_access_token,
     generate_refresh_token
 )
-from django.contrib.auth.hashers import make_password
 from .serializers import SetPasswordSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -18,8 +22,6 @@ from accounts.serializers import (
     VerifyOTPSerializer,
     LoginSerializer
 )
-
-from accounts.utils import generate_otp
 
 
 class RegisterView(APIView):
@@ -73,19 +75,22 @@ class VerifyOTPView(APIView):
 
         if not otp_obj:
             return Response(
-                {
-                    "message": "Invalid OTP"
-                },
+                {"message": "Invalid OTP"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        expiry = otp_obj.created_at + datetime.timedelta(minutes=10)
+        if timezone.now() > expiry:
+            otp_obj.delete()
+            return Response(
+                {"message": "OTP expired"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         otp_obj.is_verified = True
-
         otp_obj.save()
 
-        return Response({
-            "message": "OTP verified successfully"
-        })
+        return Response({"message": "OTP verified successfully"})
 
 class LoginView(APIView):
 
@@ -131,7 +136,8 @@ class MeView(APIView):
 
         return Response({
             "id": request.user.id,
-            "email": request.user.email
+            "email": request.user.email,
+            "role": request.user.role
         })
     
 class SetPasswordView(APIView):
@@ -171,3 +177,51 @@ class SetPasswordView(APIView):
         return Response({
             "message": "Account created successfully"
         })
+
+
+class RefreshTokenView(APIView):
+
+    def post(self, request):
+
+        refresh_token = request.data.get("refresh_token")
+
+        if not refresh_token:
+            return Response(
+                {"message": "Refresh token required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            payload = jwt.decode(
+                refresh_token,
+                os.getenv("SECRET_KEY"),
+                algorithms=["HS256"]
+            )
+        except jwt.ExpiredSignatureError:
+            return Response(
+                {"message": "Refresh token expired"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except jwt.DecodeError:
+            return Response(
+                {"message": "Invalid refresh token"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if payload.get("type") != "refresh":
+            return Response(
+                {"message": "Invalid token type"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        user = User.objects.filter(id=payload["user_id"]).first()
+
+        if not user:
+            return Response(
+                {"message": "User not found"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        access_token = generate_access_token(user)
+
+        return Response({"access_token": access_token})
