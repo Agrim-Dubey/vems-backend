@@ -1,7 +1,7 @@
 # VEMS Backend — API Documentation
 
 > **For:** Flutter Developer (Shreeyansh)  
-> **Base URL:** `http://localhost:8000` (dev) — update to production URL when deployed  
+> **Base URL:** `http://vems.akgec.ac.in`  
 > **Content-Type:** `application/json` for all requests **except** file uploads (use `multipart/form-data`)
 
 ---
