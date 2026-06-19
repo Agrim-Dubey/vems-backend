@@ -148,4 +148,12 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://vems.akgec.ac.in",
+    "https://vems.akgec.ac.in",
+]
+
 AUTH_USER_MODEL = "accounts.User"
