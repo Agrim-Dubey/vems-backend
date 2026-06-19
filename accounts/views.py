@@ -36,13 +36,8 @@ class RegisterView(APIView):
 
         otp = generate_otp()
 
-        EmailOTP.objects.update_or_create(
-            email=email,
-            defaults={
-                "otp": otp,
-                "is_verified": False
-            }
-        )
+        EmailOTP.objects.filter(email=email).delete()
+        EmailOTP.objects.create(email=email, otp=otp, is_verified=False)
 
         send_mail(
             "VEMS OTP Verification",
@@ -161,22 +156,26 @@ class SetPasswordView(APIView):
 
         if not otp_obj:
             return Response(
-                {
-                    "message": "OTP verification required"
-                },
+                {"message": "OTP verification required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        user = User.objects.create(
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {"message": "Account already exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        User.objects.create(
             username=email.split("@")[0],
             email=email,
             password=make_password(password),
             is_verified=True
         )
 
-        return Response({
-            "message": "Account created successfully"
-        })
+        otp_obj.delete()
+
+        return Response({"message": "Account created successfully"})
 
 
 class RefreshTokenView(APIView):

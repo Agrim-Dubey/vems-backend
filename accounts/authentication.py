@@ -16,19 +16,20 @@ class JWTAuthentication(BaseAuthentication):
         if not auth_header:
             return None
 
+        parts = auth_header.split(" ")
+        if len(parts) != 2 or parts[0] != "Bearer":
+            raise AuthenticationFailed("Invalid authorization header format")
+
+        token = parts[1]
+
         try:
-
-            token = auth_header.split(" ")[1]
-
             payload = jwt.decode(
                 token,
                 os.getenv("SECRET_KEY"),
                 algorithms=["HS256"]
             )
-
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed("Token expired")
-
         except jwt.DecodeError:
             raise AuthenticationFailed("Invalid token")
 
