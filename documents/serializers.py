@@ -13,6 +13,7 @@ class UserDocumentSerializer(serializers.ModelSerializer):
 
         read_only_fields = [
             "user",
+            "ocr_status",
             "verification_status",
             "extracted_data"
         ]

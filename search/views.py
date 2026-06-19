@@ -14,9 +14,10 @@ class PublicVehicleSearchView(APIView):
 
     def get(self, request):
 
-        vehicle_number = request.GET.get(
-            "vehicle_number"
-        )
+        vehicle_number = request.GET.get("vehicle_number")
+
+        if not vehicle_number:
+            return Response({"verified": False, "message": "vehicle_number param required"})
 
         vehicle = Vehicle.objects.filter(
             vehicle_number=vehicle_number
