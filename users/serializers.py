@@ -6,12 +6,6 @@ from users.models import UserProfile
 class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
-
         model = UserProfile
-
-        fields = "__all__"
-
-        read_only_fields = [
-            "user",
-            "is_profile_completed"
-        ]
+        fields = ["id", "first_name", "last_name", "student_number", "photo"]
+        read_only_fields = ["id"]
