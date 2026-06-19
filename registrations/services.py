@@ -3,48 +3,26 @@ from documents.models import UserDocument
 from vehicles.models import Vehicle
 
 
-REQUIRED_DOCUMENTS = [
-    "RC",
-    "DL",
-    "COLLEGE_ID"
-]
+REQUIRED_DOCUMENTS = ["RC", "DL", "COLLEGE_ID"]
 
 
 def validate_registration(user):
 
-    profile = getattr(user, "profile", None)
-
-    if not profile:
-        return False, "Profile incomplete"
-
-    documents = UserDocument.objects.filter(
-        user=user
-    )
+    documents = UserDocument.objects.filter(user=user)
 
     uploaded_types = list(
-        documents.values_list(
-            "document_type",
-            flat=True
-        )
+        documents.values_list("document_type", flat=True)
     )
 
     for doc_type in REQUIRED_DOCUMENTS:
-
         if doc_type not in uploaded_types:
-            return False, f"{doc_type} missing"
+            return False, f"{doc_type} document missing"
 
-    pending_ocr = documents.exclude(
-        ocr_status="COMPLETED"
-    )
+    failed_or_pending = documents.exclude(ocr_status="COMPLETED")
+    if failed_or_pending.exists():
+        return False, "One or more documents have not completed OCR processing"
 
-    if pending_ocr.exists():
-        return False, "OCR processing pending"
-
-    vehicle = Vehicle.objects.filter(
-        user=user
-    ).first()
-
-    if not vehicle:
-        return False, "Vehicle not found"
+    if not Vehicle.objects.filter(user=user).exists():
+        return False, "No vehicle registered"
 
     return True, "Validation successful"
