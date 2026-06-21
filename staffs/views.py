@@ -53,6 +53,7 @@ class AllRegistrationsView(APIView):
                 "submitted_at": reg.submitted_at,
                 "reviewed_at": reg.reviewed_at,
                 "rejection_reason": reg.rejection_reason,
+                "cross_validation_warnings": reg.cross_validation_warnings,
                 "user": {
                     "id": reg.user.id,
                     "email": reg.user.email,
@@ -88,6 +89,7 @@ class RegistrationDetailView(APIView):
             "submitted_at": registration.submitted_at,
             "reviewed_at": registration.reviewed_at,
             "rejection_reason": registration.rejection_reason,
+            "cross_validation_warnings": registration.cross_validation_warnings,
             "user": {
                 "id": registration.user.id,
                 "email": registration.user.email,
@@ -142,6 +144,12 @@ class RejectRegistrationView(APIView):
     def post(self, request, registration_id):
 
         reason = request.data.get("reason")
+
+        if not reason or not reason.strip():
+            return Response(
+                {"reason": ["This field is required."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         registration = VehicleRegistration.objects.filter(
             id=registration_id

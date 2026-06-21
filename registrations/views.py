@@ -18,6 +18,12 @@ class RegistrationView(APIView):
 
         vehicle_id = request.data.get("vehicle")
 
+        if not vehicle_id:
+            return Response(
+                {"vehicle": ["This field is required."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         vehicle = Vehicle.objects.filter(
             id=vehicle_id,
             user=request.user

@@ -118,7 +118,8 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "accounts.authentication.JWTAuthentication",
-    )
+    ),
+    "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler",
 }
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/

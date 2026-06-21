@@ -1,5 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import status
 
 from vehicles.models import Vehicle
 
@@ -17,7 +18,10 @@ class PublicVehicleSearchView(APIView):
         vehicle_number = request.GET.get("vehicle_number")
 
         if not vehicle_number:
-            return Response({"verified": False, "message": "vehicle_number param required"})
+            return Response(
+                {"verified": False, "message": "vehicle_number param required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         vehicle = Vehicle.objects.filter(
             vehicle_number=vehicle_number
