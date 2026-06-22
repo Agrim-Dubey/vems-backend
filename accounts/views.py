@@ -26,6 +26,9 @@ from accounts.serializers import (
 
 class RegisterView(APIView):
 
+    authentication_classes = []
+    permission_classes = []
+
     def post(self, request):
 
         serializer = RegisterSerializer(data=request.data)
@@ -52,6 +55,9 @@ class RegisterView(APIView):
 
 
 class VerifyOTPView(APIView):
+
+    authentication_classes = []
+    permission_classes = []
 
     def post(self, request):
 
@@ -88,6 +94,9 @@ class VerifyOTPView(APIView):
         return Response({"message": "OTP verified successfully"})
 
 class LoginView(APIView):
+
+    authentication_classes = []
+    permission_classes = []
 
     def post(self, request):
 
@@ -137,6 +146,9 @@ class MeView(APIView):
     
 class SetPasswordView(APIView):
 
+    authentication_classes = []
+    permission_classes = []
+
     def post(self, request):
 
         serializer = SetPasswordSerializer(
@@ -179,6 +191,9 @@ class SetPasswordView(APIView):
 
 
 class RefreshTokenView(APIView):
+
+    authentication_classes = []
+    permission_classes = []
 
     def post(self, request):
 

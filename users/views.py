@@ -1,3 +1,5 @@
+from django.db import IntegrityError
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -35,6 +37,12 @@ class ProfileView(APIView):
 
         serializer.is_valid(raise_exception=True)
 
-        serializer.save(user=request.user, is_profile_completed=True)
+        try:
+            serializer.save(user=request.user, is_profile_completed=True)
+        except IntegrityError:
+            return Response(
+                {"student_number": ["A profile with this student number already exists."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         return Response(serializer.data)
