@@ -9,13 +9,26 @@ from rest_framework.views import exception_handler
 logger = logging.getLogger(__name__)
 
 
+def _first_error(data):
+    """Pull the first error string out of a DRF validation error dict."""
+    for key, val in data.items():
+        if isinstance(val, list) and val:
+            return str(val[0])
+        if isinstance(val, str):
+            return val
+    return "Validation error."
+
+
 def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
 
     if response is not None:
         data = response.data
-        if isinstance(data, dict) and "detail" in data and len(data) == 1:
-            response.data = {"message": str(data["detail"])}
+        if isinstance(data, dict):
+            if "detail" in data and len(data) == 1:
+                response.data = {"message": str(data["detail"])}
+            else:
+                response.data = {"message": _first_error(data)}
         return response
 
     logger.exception("Unhandled exception: %s", exc)
