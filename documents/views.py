@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -5,6 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from documents.models import UserDocument
 from documents.serializers import UserDocumentSerializer
 from ocr.services import process_document
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentUploadView(APIView):
@@ -28,7 +32,8 @@ class DocumentUploadView(APIView):
             extracted_data = process_document(document)
             document.extracted_data = extracted_data
             document.ocr_status = "COMPLETED"
-        except Exception:
+        except Exception as e:
+            logger.exception("OCR failed for document %s: %s", document.id, e)
             document.ocr_status = "FAILED"
 
         document.save(update_fields=["extracted_data", "ocr_status"])
