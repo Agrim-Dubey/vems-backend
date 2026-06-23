@@ -24,7 +24,7 @@ class PublicVehicleSearchView(APIView):
             )
 
         vehicle = Vehicle.objects.filter(
-            vehicle_number=vehicle_number
+            vehicle_number=vehicle_number.upper()
         ).first()
 
         if not vehicle:
