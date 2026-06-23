@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from accounts.models import User, EmailOTP
+from accounts.models import User
 
 
 @admin.register(User)
@@ -16,7 +16,3 @@ class CustomUserAdmin(UserAdmin):
     )
 
 
-@admin.register(EmailOTP)
-class EmailOTPAdmin(admin.ModelAdmin):
-    list_display = ["email", "otp", "is_verified", "created_at"]
-    search_fields = ["email"]
