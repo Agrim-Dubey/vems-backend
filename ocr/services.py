@@ -18,17 +18,9 @@ def extract_text_from_image(image_path):
 
 def extract_text_from_pdf(pdf_path):
 
-    pages = convert_from_path(pdf_path)
+    pages = convert_from_path(pdf_path, dpi=100, first_page=1, last_page=1)
 
-    full_text = ""
-
-    for page in pages:
-
-        text = pytesseract.image_to_string(page)
-
-        full_text += text
-
-    return full_text
+    return pytesseract.image_to_string(pages[0])
 
 
 def extract_vehicle_number(text):
