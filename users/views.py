@@ -46,3 +46,31 @@ class ProfileView(APIView):
             )
 
         return Response(serializer.data)
+
+    def patch(self, request):
+
+        profile = UserProfile.objects.filter(user=request.user).first()
+
+        if not profile:
+            return Response(
+                {"message": "Profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = UserProfileSerializer(
+            profile,
+            data=request.data,
+            partial=True,
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            serializer.save()
+        except IntegrityError:
+            return Response(
+                {"message": "A profile with this student number already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(serializer.data)
