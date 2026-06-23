@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     musl-dev \
     postgresql-dev \
     tesseract-ocr \
+    tesseract-ocr-data-eng \
     poppler-utils
 
 COPY requirements.txt .
