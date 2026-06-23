@@ -120,6 +120,9 @@ REST_FRAMEWORK = {
         "accounts.authentication.JWTAuthentication",
     ),
     "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler",
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
 }
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
