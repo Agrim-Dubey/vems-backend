@@ -25,8 +25,9 @@ class VehicleView(APIView):
     def get(self, request):
 
         vehicles = Vehicle.objects.filter(
-            user=request.user
-        )
+            user=request.user,
+            registrations__isnull=False
+        ).distinct()
 
         serializer = VehicleSerializer(
             vehicles,
