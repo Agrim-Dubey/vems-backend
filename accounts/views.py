@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from accounts.utils import (
     generate_otp,
@@ -26,7 +26,13 @@ from accounts.serializers import (
     LoginSerializer
 )
 from users.models import UserProfile
-from core.schemas import MessageSerializer, TokenResponseSerializer, AccessTokenSerializer, MeSerializer
+from core.schemas import (
+    MessageSerializer,
+    TokenResponseSerializer,
+    AccessTokenSerializer,
+    MeSerializer,
+    RefreshTokenRequestSerializer,
+)
 
 
 class RegisterView(APIView):
@@ -36,13 +42,32 @@ class RegisterView(APIView):
 
     @extend_schema(
         tags=["Auth"],
-        summary="Register a new user",
-        description="Send OTP to an AKGEC college email. Email must end with @akgec.ac.in.",
+        summary="Register — send OTP",
+        description="Send a 6-digit OTP to an AKGEC college email. Email must end with @akgec.ac.in.",
         request=RegisterSerializer,
         responses={
-            200: OpenApiResponse(response=MessageSerializer, description="OTP sent"),
+            200: OpenApiResponse(response=MessageSerializer, description="OTP sent successfully"),
             400: OpenApiResponse(response=MessageSerializer, description="Invalid email or already registered"),
         },
+        examples=[
+            OpenApiExample(
+                "Valid request",
+                value={"email": "student24154001@akgec.ac.in"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Success",
+                value={"message": "OTP sent successfully"},
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                "Invalid email",
+                value={"message": "Invalid college email"},
+                response_only=True,
+                status_codes=["400"],
+            ),
+        ],
     )
     def post(self, request):
 
@@ -64,9 +89,7 @@ class RegisterView(APIView):
             [email]
         )
 
-        return Response({
-            "message": "OTP sent successfully"
-        })
+        return Response({"message": "OTP sent successfully"})
 
 
 class VerifyOTPView(APIView):
@@ -77,12 +100,37 @@ class VerifyOTPView(APIView):
     @extend_schema(
         tags=["Auth"],
         summary="Verify OTP",
-        description="Verify the OTP sent to the email. OTP expires in 10 minutes.",
+        description="Verify the OTP that was sent to the email. OTP expires in 10 minutes.",
         request=VerifyOTPSerializer,
         responses={
             200: OpenApiResponse(response=MessageSerializer, description="OTP verified"),
             400: OpenApiResponse(response=MessageSerializer, description="Invalid or expired OTP"),
         },
+        examples=[
+            OpenApiExample(
+                "Valid request",
+                value={"email": "student24154001@akgec.ac.in", "otp": "482915"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Success",
+                value={"message": "OTP verified successfully"},
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                "Invalid OTP",
+                value={"message": "Invalid OTP"},
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                "Expired OTP",
+                value={"message": "OTP expired"},
+                response_only=True,
+                status_codes=["400"],
+            ),
+        ],
     )
     def post(self, request):
 
@@ -119,85 +167,6 @@ class VerifyOTPView(APIView):
         return Response({"message": "OTP verified successfully"})
 
 
-class LoginView(APIView):
-
-    authentication_classes = []
-    permission_classes = []
-
-    @extend_schema(
-        tags=["Auth"],
-        summary="Login",
-        description="Authenticate with email and password. Returns JWT access and refresh tokens.",
-        request=LoginSerializer,
-        responses={
-            200: OpenApiResponse(response=TokenResponseSerializer, description="Login successful"),
-            400: OpenApiResponse(response=MessageSerializer, description="Invalid credentials"),
-        },
-    )
-    def post(self, request):
-
-        serializer = LoginSerializer(data=request.data)
-
-        serializer.is_valid(raise_exception=True)
-
-        email = serializer.validated_data["email"]
-
-        password = serializer.validated_data["password"]
-
-        user = authenticate(
-            request,
-            email=email,
-            password=password
-        )
-
-        if not user:
-            return Response(
-                {
-                    "message": "Invalid credentials"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        access_token = generate_access_token(user)
-
-        refresh_token = generate_refresh_token(user)
-
-        return Response({
-            "message": "Login successful",
-            "access_token": access_token,
-            "refresh_token": refresh_token
-        })
-
-
-class MeView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        tags=["Auth"],
-        summary="Get current user",
-        description="Returns the authenticated user's ID, email, and role. Returns 403 if role is ADMIN.",
-        responses={
-            200: OpenApiResponse(response=MeSerializer, description="User data"),
-            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
-            403: OpenApiResponse(response=MessageSerializer, description="Admin users are blocked from this endpoint"),
-        },
-    )
-    def get(self, request):
-
-        if request.user.role == "ADMIN":
-            return Response(
-                {"message": "Access denied."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        return Response({
-            "id": request.user.id,
-            "email": request.user.email,
-            "role": request.user.role
-        })
-
-
 class SetPasswordView(APIView):
 
     authentication_classes = []
@@ -206,18 +175,45 @@ class SetPasswordView(APIView):
     @extend_schema(
         tags=["Auth"],
         summary="Set password",
-        description="Set password for a verified email. OTP must have been verified first via /api/auth/verify-otp/.",
+        description="Set the account password after OTP is verified. Creates the user account.",
         request=SetPasswordSerializer,
         responses={
-            200: OpenApiResponse(response=MessageSerializer, description="Account created"),
-            400: OpenApiResponse(response=MessageSerializer, description="OTP not verified, account exists, or passwords mismatch"),
+            200: OpenApiResponse(response=MessageSerializer, description="Account created successfully"),
+            400: OpenApiResponse(response=MessageSerializer, description="OTP not verified, account already exists, or passwords don't match"),
         },
+        examples=[
+            OpenApiExample(
+                "Valid request",
+                value={
+                    "email": "student24154001@akgec.ac.in",
+                    "password": "SecurePass@123",
+                    "confirm_password": "SecurePass@123",
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Success",
+                value={"message": "Account created successfully"},
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                "OTP not verified",
+                value={"message": "OTP verification required"},
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                "Passwords don't match",
+                value={"message": "Passwords do not match"},
+                response_only=True,
+                status_codes=["400"],
+            ),
+        ],
     )
     def post(self, request):
 
-        serializer = SetPasswordSerializer(
-            data=request.data
-        )
+        serializer = SetPasswordSerializer(data=request.data)
 
         serializer.is_valid(raise_exception=True)
 
@@ -261,6 +257,121 @@ class SetPasswordView(APIView):
         return Response({"message": "Account created successfully"})
 
 
+class LoginView(APIView):
+
+    authentication_classes = []
+    permission_classes = []
+
+    @extend_schema(
+        tags=["Auth"],
+        summary="Login",
+        description="Authenticate with email and password. Returns JWT access and refresh tokens. Pass access_token as `Authorization: Bearer <token>` on all protected endpoints.",
+        request=LoginSerializer,
+        responses={
+            200: OpenApiResponse(response=TokenResponseSerializer, description="Login successful"),
+            400: OpenApiResponse(response=MessageSerializer, description="Invalid credentials"),
+        },
+        examples=[
+            OpenApiExample(
+                "Valid request",
+                value={"email": "student24154001@akgec.ac.in", "password": "SecurePass@123"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Success",
+                value={
+                    "message": "Login successful",
+                    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ0eXBlIjoiYWNjZXNzIn0.abc123",
+                    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ0eXBlIjoicmVmcmVzaCJ9.xyz789",
+                },
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                "Invalid credentials",
+                value={"message": "Invalid credentials"},
+                response_only=True,
+                status_codes=["400"],
+            ),
+        ],
+    )
+    def post(self, request):
+
+        serializer = LoginSerializer(data=request.data)
+
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+
+        password = serializer.validated_data["password"]
+
+        user = authenticate(request, email=email, password=password)
+
+        if not user:
+            return Response(
+                {"message": "Invalid credentials"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        access_token = generate_access_token(user)
+        refresh_token = generate_refresh_token(user)
+
+        return Response({
+            "message": "Login successful",
+            "access_token": access_token,
+            "refresh_token": refresh_token
+        })
+
+
+class MeView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Auth"],
+        summary="Get current user",
+        description="Returns the authenticated user's ID, email, and role. **ADMIN users get 403** — admin access is only via the Django admin panel.",
+        responses={
+            200: OpenApiResponse(response=MeSerializer, description="User data"),
+            401: OpenApiResponse(response=MessageSerializer, description="No token or invalid token"),
+            403: OpenApiResponse(response=MessageSerializer, description="Admin users are blocked from this endpoint"),
+        },
+        examples=[
+            OpenApiExample(
+                "USER role",
+                value={"id": 1, "email": "student24154001@akgec.ac.in", "role": "USER"},
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                "STAFF role",
+                value={"id": 2, "email": "guard@akgec.ac.in", "role": "STAFF"},
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                "Admin blocked",
+                value={"message": "Access denied."},
+                response_only=True,
+                status_codes=["403"],
+            ),
+        ],
+    )
+    def get(self, request):
+
+        if request.user.role == "ADMIN":
+            return Response(
+                {"message": "Access denied."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        return Response({
+            "id": request.user.id,
+            "email": request.user.email,
+            "role": request.user.role
+        })
+
+
 class RefreshTokenView(APIView):
 
     authentication_classes = []
@@ -270,12 +381,31 @@ class RefreshTokenView(APIView):
         tags=["Auth"],
         summary="Refresh access token",
         description="Exchange a valid refresh token for a new access token.",
-        request={"application/json": {"type": "object", "properties": {"refresh_token": {"type": "string"}}, "required": ["refresh_token"]}},
+        request=RefreshTokenRequestSerializer,
         responses={
             200: OpenApiResponse(response=AccessTokenSerializer, description="New access token"),
             400: OpenApiResponse(response=MessageSerializer, description="Refresh token missing"),
             401: OpenApiResponse(response=MessageSerializer, description="Invalid or expired refresh token"),
         },
+        examples=[
+            OpenApiExample(
+                "Valid request",
+                value={"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."},
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Success",
+                value={"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."},
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                "Expired",
+                value={"message": "Refresh token expired"},
+                response_only=True,
+                status_codes=["401"],
+            ),
+        ],
     )
     def post(self, request):
 

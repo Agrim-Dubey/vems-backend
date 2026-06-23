@@ -1,5 +1,4 @@
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from drf_spectacular.openapi import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,7 +10,18 @@ from registrations.services import validate_registration, cross_validate_documen
 from registrations.serializers import VehicleRegistrationSerializer
 
 from vehicles.models import Vehicle
-from core.schemas import MessageSerializer
+from core.schemas import MessageSerializer, RegistrationSubmitSerializer
+
+_REG_EXAMPLE = {
+    "id": 1,
+    "user": 1,
+    "vehicle": 1,
+    "status": "PENDING",
+    "rejection_reason": None,
+    "cross_validation_warnings": [],
+    "submitted_at": "2026-06-23T10:30:00Z",
+    "reviewed_at": None,
+}
 
 
 class RegistrationView(APIView):
@@ -22,19 +32,50 @@ class RegistrationView(APIView):
         tags=["Registrations"],
         summary="Submit vehicle registration",
         description=(
-            "Submit a vehicle for registration. Requires:\n"
-            "- Vehicle must belong to the user\n"
-            "- All three documents (RC, DL, COLLEGE_ID) must have `ocr_status = COMPLETED`\n"
-            "- No existing registration for this vehicle\n\n"
-            "Registration is created with `status = PENDING`. Admin reviews and approves/rejects."
+            "Submit a vehicle for admin review. Prerequisites:\n"
+            "1. Vehicle must belong to the authenticated user — create one via `POST /api/vehicles/`\n"
+            "2. All three documents **RC**, **DL**, and **COLLEGE_ID** must be uploaded with `ocr_status = COMPLETED`\n"
+            "3. No existing registration for this vehicle\n\n"
+            "Submission is always created with `status = PENDING`. Admin approves or rejects from the dashboard."
         ),
-        request={"application/json": {"type": "object", "properties": {"vehicle": {"type": "integer", "description": "Vehicle ID"}}, "required": ["vehicle"]}},
+        request=RegistrationSubmitSerializer,
         responses={
             201: OpenApiResponse(response=VehicleRegistrationSerializer, description="Registration submitted"),
-            400: OpenApiResponse(response=MessageSerializer, description="Validation failed or already submitted"),
+            400: OpenApiResponse(response=MessageSerializer, description="Missing vehicle, docs not ready, or already submitted"),
             401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
             404: OpenApiResponse(response=MessageSerializer, description="Vehicle not found"),
         },
+        examples=[
+            OpenApiExample(
+                "Request",
+                value={"vehicle": 1},
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Success",
+                value=_REG_EXAMPLE,
+                response_only=True,
+                status_codes=["201"],
+            ),
+            OpenApiExample(
+                "With cross-validation warnings",
+                value={**_REG_EXAMPLE, "cross_validation_warnings": ["Vehicle number on RC does not match registered number"]},
+                response_only=True,
+                status_codes=["201"],
+            ),
+            OpenApiExample(
+                "Docs not ready",
+                value={"message": "All documents must be uploaded and OCR completed before submitting registration"},
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                "Already submitted",
+                value={"message": "Registration already submitted for this vehicle"},
+                response_only=True,
+                status_codes=["400"],
+            ),
+        ],
     )
     def post(self, request):
 
@@ -92,16 +133,19 @@ class RegistrationView(APIView):
             200: OpenApiResponse(response=VehicleRegistrationSerializer(many=True), description="List of registrations"),
             401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
         },
+        examples=[
+            OpenApiExample(
+                "Success",
+                value=[_REG_EXAMPLE],
+                response_only=True,
+                status_codes=["200"],
+            ),
+        ],
     )
     def get(self, request):
 
-        registrations = VehicleRegistration.objects.filter(
-            user=request.user
-        )
+        registrations = VehicleRegistration.objects.filter(user=request.user)
 
-        serializer = VehicleRegistrationSerializer(
-            registrations,
-            many=True
-        )
+        serializer = VehicleRegistrationSerializer(registrations, many=True)
 
         return Response(serializer.data)

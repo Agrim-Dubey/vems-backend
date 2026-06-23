@@ -1,7 +1,7 @@
 from django.utils import timezone
 from django.core.mail import send_mail
 
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter, OpenApiExample
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -23,6 +23,27 @@ from documents.serializers import UserDocumentSerializer
 
 from vehicles.serializers import VehicleSerializer
 
+_VEHICLE_EXAMPLE = {
+    "id": 1,
+    "vehicle_number": "UP03MF4477",
+    "vehicle_type": "CAR",
+    "vehicle_model": "Honda City",
+    "vehicle_color": "White",
+    "rc_number": "RC123456789",
+    "owner_name": "Agrim Dubey",
+}
+
+_REG_LIST_EXAMPLE = {
+    "id": 1,
+    "status": "PENDING",
+    "submitted_at": "2026-06-23T10:30:00Z",
+    "reviewed_at": None,
+    "rejection_reason": None,
+    "cross_validation_warnings": [],
+    "user": {"id": 1, "email": "student24154001@akgec.ac.in"},
+    "vehicle": _VEHICLE_EXAMPLE,
+}
+
 
 class DashboardStatsView(APIView):
 
@@ -33,10 +54,18 @@ class DashboardStatsView(APIView):
         summary="Dashboard stats",
         description="Returns count of PENDING, APPROVED, and REJECTED registrations.",
         responses={
-            200: OpenApiResponse(response=DashboardStatsSerializer, description="Stats"),
+            200: OpenApiResponse(response=DashboardStatsSerializer, description="Registration counts"),
             401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
             403: OpenApiResponse(response=MessageSerializer, description="Not an admin"),
         },
+        examples=[
+            OpenApiExample(
+                "Success",
+                value={"pending": 12, "approved": 45, "rejected": 3},
+                response_only=True,
+                status_codes=["200"],
+            ),
+        ],
     )
     def get(self, request):
 
@@ -54,14 +83,15 @@ class AllRegistrationsView(APIView):
     @extend_schema(
         tags=["Admin"],
         summary="List all registrations",
-        description="Returns all registrations. Optionally filter by status using `?status=PENDING|APPROVED|REJECTED`.",
+        description="Returns all registrations ordered by submission date. Filter by status using `?status=PENDING|APPROVED|REJECTED`.",
         parameters=[
             OpenApiParameter(
                 name="status",
-                description="Filter by status: PENDING, APPROVED, or REJECTED",
+                description="Filter by status",
                 required=False,
                 type=str,
                 enum=["PENDING", "APPROVED", "REJECTED"],
+                location=OpenApiParameter.QUERY,
             )
         ],
         responses={
@@ -69,6 +99,14 @@ class AllRegistrationsView(APIView):
             401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
             403: OpenApiResponse(response=MessageSerializer, description="Not an admin"),
         },
+        examples=[
+            OpenApiExample(
+                "Success",
+                value=[_REG_LIST_EXAMPLE],
+                response_only=True,
+                status_codes=["200"],
+            ),
+        ],
     )
     def get(self, request):
 
@@ -107,13 +145,38 @@ class RegistrationDetailView(APIView):
     @extend_schema(
         tags=["Admin"],
         summary="Registration detail",
-        description="Full detail for one registration including user info, vehicle data, and all uploaded documents with OCR data.",
+        description="Full detail for one registration — includes user info, vehicle data, and all uploaded documents with extracted OCR data.",
         responses={
-            200: OpenApiResponse(description="Registration detail with documents"),
+            200: OpenApiResponse(description="Registration with documents"),
             401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
             403: OpenApiResponse(response=MessageSerializer, description="Not an admin"),
             404: OpenApiResponse(response=MessageSerializer, description="Registration not found"),
         },
+        examples=[
+            OpenApiExample(
+                "Success",
+                value={
+                    **_REG_LIST_EXAMPLE,
+                    "documents": [
+                        {
+                            "id": 1,
+                            "document_type": "RC",
+                            "ocr_status": "COMPLETED",
+                            "verification_status": "PENDING",
+                            "extracted_data": {
+                                "vehicle_number": "UP03MF4477",
+                                "dl_number": None,
+                                "student_id": None,
+                                "raw_text": "...",
+                            },
+                            "uploaded_at": "2026-06-23T10:00:00Z",
+                        }
+                    ],
+                },
+                response_only=True,
+                status_codes=["200"],
+            ),
+        ],
     )
     def get(self, request, registration_id):
 
@@ -152,13 +215,21 @@ class ApproveRegistrationView(APIView):
     @extend_schema(
         tags=["Admin"],
         summary="Approve registration",
-        description="Approve a vehicle registration. Sends approval email to the student.",
+        description="Approve a vehicle registration. Sends an approval email to the student automatically.",
         responses={
             200: OpenApiResponse(response=MessageSerializer, description="Registration approved"),
             401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
             403: OpenApiResponse(response=MessageSerializer, description="Not an admin"),
             404: OpenApiResponse(response=MessageSerializer, description="Registration not found"),
         },
+        examples=[
+            OpenApiExample(
+                "Success",
+                value={"message": "Registration approved"},
+                response_only=True,
+                status_codes=["200"],
+            ),
+        ],
     )
     def post(self, request, registration_id):
 
@@ -201,15 +272,34 @@ class RejectRegistrationView(APIView):
     @extend_schema(
         tags=["Admin"],
         summary="Reject registration",
-        description="Reject a vehicle registration with a reason. Sends rejection email to the student.",
+        description="Reject a vehicle registration with a reason. Sends a rejection email to the student.",
         request=RejectRequestSerializer,
         responses={
             200: OpenApiResponse(response=MessageSerializer, description="Registration rejected"),
-            400: OpenApiResponse(response=MessageSerializer, description="Reason is required"),
+            400: OpenApiResponse(response=MessageSerializer, description="reason is required"),
             401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
             403: OpenApiResponse(response=MessageSerializer, description="Not an admin"),
             404: OpenApiResponse(response=MessageSerializer, description="Registration not found"),
         },
+        examples=[
+            OpenApiExample(
+                "Request",
+                value={"reason": "RC document is blurry and unreadable. Please re-upload a clearer scan."},
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Success",
+                value={"message": "Registration rejected"},
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                "Missing reason",
+                value={"message": "This field is required."},
+                response_only=True,
+                status_codes=["400"],
+            ),
+        ],
     )
     def post(self, request, registration_id):
 

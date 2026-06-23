@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -20,16 +20,40 @@ class ProcessOCRView(APIView):
         tags=["OCR"],
         summary="Trigger OCR on a document",
         description=(
-            "Manually trigger OCR processing on an uploaded document. "
-            "Returns updated document with `extracted_data` and `ocr_status`. "
-            "Note: OCR is also automatically triggered on document upload."
+            "Manually re-run OCR on a document you already uploaded. "
+            "Useful if the first attempt failed. "
+            "Returns the updated document with `extracted_data` and updated `ocr_status`."
         ),
         responses={
             200: OpenApiResponse(response=UserDocumentSerializer, description="OCR processed successfully"),
             401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
             404: OpenApiResponse(response=MessageSerializer, description="Document not found"),
-            500: OpenApiResponse(response=MessageSerializer, description="OCR processing failed"),
+            500: OpenApiResponse(response=MessageSerializer, description="OCR processing failed — re-upload a clearer image"),
         },
+        examples=[
+            OpenApiExample(
+                "Success",
+                value={
+                    "id": 1,
+                    "document_type": "RC",
+                    "ocr_status": "COMPLETED",
+                    "extracted_data": {
+                        "vehicle_number": "UP03MF4477",
+                        "dl_number": None,
+                        "student_id": None,
+                        "raw_text": "UP03MF4477 HONDA CITY ..."
+                    },
+                },
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                "OCR failed",
+                value={"message": "OCR processing failed — please re-upload a clearer image"},
+                response_only=True,
+                status_codes=["500"],
+            ),
+        ],
     )
     def post(self, request, document_id):
 

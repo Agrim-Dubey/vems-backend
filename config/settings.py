@@ -132,19 +132,24 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": (
         "Vehicle Entry Management System — AKGEC Campus Security\n\n"
         "## Authentication\n"
-        "Most endpoints require a JWT access token. Obtain one from `POST /api/auth/login/` "
-        "and pass it as: `Authorization: Bearer <access_token>`\n\n"
+        "Most endpoints require a JWT access token.\n"
+        "1. Register → `POST /api/auth/register/`\n"
+        "2. Verify OTP → `POST /api/auth/verify-otp/`\n"
+        "3. Set password → `POST /api/auth/set-password/`\n"
+        "4. Login → `POST /api/auth/login/` — returns `access_token` and `refresh_token`\n"
+        "5. Click **Authorize** above and enter: `Bearer <access_token>`\n\n"
         "## Roles\n"
         "- **USER** — Students registering vehicles\n"
-        "- **STAFF** — Security guards verifying vehicles at gate\n"
-        "- **ADMIN** — Admin dashboard (blocked from `/api/auth/me/`)\n\n"
-        "## Public Endpoints\n"
-        "- `GET /api/search/vehicle/` — No auth required"
+        "- **STAFF** — Security guards verifying at gate\n"
+        "- **ADMIN** — Admin dashboard only (blocked from `/api/auth/me/`)\n\n"
+        "## Public Endpoints (no auth)\n"
+        "- `GET /api/search/vehicle/` — Vehicle verification lookup"
     ),
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SORT_OPERATIONS": False,
+    "ENUM_GENERATE_CHOICE_DESCRIPTION": False,
     "TAGS": [
         {"name": "Auth", "description": "Registration, login, and token management"},
         {"name": "Profile", "description": "User profile management"},
@@ -152,7 +157,7 @@ SPECTACULAR_SETTINGS = {
         {"name": "Documents", "description": "Document upload and management"},
         {"name": "OCR", "description": "OCR processing on uploaded documents"},
         {"name": "Registrations", "description": "Vehicle registration submission and status"},
-        {"name": "Search", "description": "Public vehicle search endpoint"},
+        {"name": "Search", "description": "Public vehicle search — no auth required"},
         {"name": "Admin", "description": "Admin dashboard — requires ADMIN role"},
     ],
 }
