@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from accounts.models import User, EmailOTP
+from users.models import UserProfile
 from accounts.serializers import (
     RegisterSerializer,
     VerifyOTPSerializer,
@@ -184,11 +185,18 @@ class SetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        User.objects.create(
+        user = User.objects.create(
             username=email.split("@")[0],
             email=email,
             password=make_password(password),
             is_verified=True
+        )
+
+        UserProfile.objects.create(
+            user=user,
+            first_name="",
+            last_name="",
+            student_number=f"TEMP_{user.id}"
         )
 
         otp_obj.delete()
