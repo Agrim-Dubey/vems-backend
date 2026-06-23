@@ -1,5 +1,7 @@
 import logging
 
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -7,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from documents.models import UserDocument
 from documents.serializers import UserDocumentSerializer
 from ocr.services import process_document
+from core.schemas import MessageSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +18,20 @@ class DocumentUploadView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["Documents"],
+        summary="Upload a document",
+        description=(
+            "Upload RC, DL, or COLLEGE_ID document. OCR is triggered automatically on upload. "
+            "`ocr_status` will be `COMPLETED` or `FAILED` in the response."
+        ),
+        request={"multipart/form-data": UserDocumentSerializer},
+        responses={
+            200: OpenApiResponse(response=UserDocumentSerializer, description="Document uploaded and OCR processed"),
+            400: OpenApiResponse(response=MessageSerializer, description="Validation error"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+        },
+    )
     def post(self, request):
 
         serializer = UserDocumentSerializer(
@@ -40,6 +57,15 @@ class DocumentUploadView(APIView):
 
         return Response(UserDocumentSerializer(document).data)
 
+    @extend_schema(
+        tags=["Documents"],
+        summary="List documents",
+        description="Returns all documents uploaded by the authenticated user.",
+        responses={
+            200: OpenApiResponse(response=UserDocumentSerializer(many=True), description="List of documents"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+        },
+    )
     def get(self, request):
 
         documents = UserDocument.objects.filter(

@@ -1,3 +1,5 @@
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,12 +9,28 @@ from documents.models import UserDocument
 from documents.serializers import UserDocumentSerializer
 
 from ocr.services import process_document
+from core.schemas import MessageSerializer
 
 
 class ProcessOCRView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["OCR"],
+        summary="Trigger OCR on a document",
+        description=(
+            "Manually trigger OCR processing on an uploaded document. "
+            "Returns updated document with `extracted_data` and `ocr_status`. "
+            "Note: OCR is also automatically triggered on document upload."
+        ),
+        responses={
+            200: OpenApiResponse(response=UserDocumentSerializer, description="OCR processed successfully"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+            404: OpenApiResponse(response=MessageSerializer, description="Document not found"),
+            500: OpenApiResponse(response=MessageSerializer, description="OCR processing failed"),
+        },
+    )
     def post(self, request, document_id):
 
         document = UserDocument.objects.filter(

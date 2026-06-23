@@ -19,6 +19,8 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+
 handler404 = "core.exceptions.handler404"
 handler500 = "core.exceptions.handler500"
 
@@ -28,10 +30,14 @@ urlpatterns = [
     path("api/users/", include("users.urls")),
     path("api/documents/", include("documents.urls")),
     path("api/vehicles/", include("vehicles.urls")),
-    path("api/registrations/",include("registrations.urls")),
+    path("api/registrations/", include("registrations.urls")),
     path("api/ocr/", include("ocr.urls")),
     path("api/search/", include("search.urls")),
     path("api/admin/", include("staffs.urls")),
+    # Swagger / OpenAPI
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]
 
 

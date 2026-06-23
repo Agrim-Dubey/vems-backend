@@ -6,6 +6,9 @@ from django.core.mail import send_mail
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
+
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+
 from accounts.utils import (
     generate_otp,
     generate_access_token,
@@ -17,12 +20,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from accounts.models import User, EmailOTP
-from users.models import UserProfile
 from accounts.serializers import (
     RegisterSerializer,
     VerifyOTPSerializer,
     LoginSerializer
 )
+from users.models import UserProfile
+from core.schemas import MessageSerializer, TokenResponseSerializer, AccessTokenSerializer, MeSerializer
 
 
 class RegisterView(APIView):
@@ -30,6 +34,16 @@ class RegisterView(APIView):
     authentication_classes = []
     permission_classes = []
 
+    @extend_schema(
+        tags=["Auth"],
+        summary="Register a new user",
+        description="Send OTP to an AKGEC college email. Email must end with @akgec.ac.in.",
+        request=RegisterSerializer,
+        responses={
+            200: OpenApiResponse(response=MessageSerializer, description="OTP sent"),
+            400: OpenApiResponse(response=MessageSerializer, description="Invalid email or already registered"),
+        },
+    )
     def post(self, request):
 
         serializer = RegisterSerializer(data=request.data)
@@ -60,6 +74,16 @@ class VerifyOTPView(APIView):
     authentication_classes = []
     permission_classes = []
 
+    @extend_schema(
+        tags=["Auth"],
+        summary="Verify OTP",
+        description="Verify the OTP sent to the email. OTP expires in 10 minutes.",
+        request=VerifyOTPSerializer,
+        responses={
+            200: OpenApiResponse(response=MessageSerializer, description="OTP verified"),
+            400: OpenApiResponse(response=MessageSerializer, description="Invalid or expired OTP"),
+        },
+    )
     def post(self, request):
 
         serializer = VerifyOTPSerializer(data=request.data)
@@ -94,11 +118,22 @@ class VerifyOTPView(APIView):
 
         return Response({"message": "OTP verified successfully"})
 
+
 class LoginView(APIView):
 
     authentication_classes = []
     permission_classes = []
 
+    @extend_schema(
+        tags=["Auth"],
+        summary="Login",
+        description="Authenticate with email and password. Returns JWT access and refresh tokens.",
+        request=LoginSerializer,
+        responses={
+            200: OpenApiResponse(response=TokenResponseSerializer, description="Login successful"),
+            400: OpenApiResponse(response=MessageSerializer, description="Invalid credentials"),
+        },
+    )
     def post(self, request):
 
         serializer = LoginSerializer(data=request.data)
@@ -132,11 +167,22 @@ class LoginView(APIView):
             "access_token": access_token,
             "refresh_token": refresh_token
         })
-    
+
+
 class MeView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["Auth"],
+        summary="Get current user",
+        description="Returns the authenticated user's ID, email, and role. Returns 403 if role is ADMIN.",
+        responses={
+            200: OpenApiResponse(response=MeSerializer, description="User data"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+            403: OpenApiResponse(response=MessageSerializer, description="Admin users are blocked from this endpoint"),
+        },
+    )
     def get(self, request):
 
         if request.user.role == "ADMIN":
@@ -150,12 +196,23 @@ class MeView(APIView):
             "email": request.user.email,
             "role": request.user.role
         })
-    
+
+
 class SetPasswordView(APIView):
 
     authentication_classes = []
     permission_classes = []
 
+    @extend_schema(
+        tags=["Auth"],
+        summary="Set password",
+        description="Set password for a verified email. OTP must have been verified first via /api/auth/verify-otp/.",
+        request=SetPasswordSerializer,
+        responses={
+            200: OpenApiResponse(response=MessageSerializer, description="Account created"),
+            400: OpenApiResponse(response=MessageSerializer, description="OTP not verified, account exists, or passwords mismatch"),
+        },
+    )
     def post(self, request):
 
         serializer = SetPasswordSerializer(
@@ -209,6 +266,17 @@ class RefreshTokenView(APIView):
     authentication_classes = []
     permission_classes = []
 
+    @extend_schema(
+        tags=["Auth"],
+        summary="Refresh access token",
+        description="Exchange a valid refresh token for a new access token.",
+        request={"application/json": {"type": "object", "properties": {"refresh_token": {"type": "string"}}, "required": ["refresh_token"]}},
+        responses={
+            200: OpenApiResponse(response=AccessTokenSerializer, description="New access token"),
+            400: OpenApiResponse(response=MessageSerializer, description="Refresh token missing"),
+            401: OpenApiResponse(response=MessageSerializer, description="Invalid or expired refresh token"),
+        },
+    )
     def post(self, request):
 
         refresh_token = request.data.get("refresh_token")

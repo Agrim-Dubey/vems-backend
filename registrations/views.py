@@ -1,3 +1,6 @@
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.openapi import OpenApiTypes
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,12 +11,31 @@ from registrations.services import validate_registration, cross_validate_documen
 from registrations.serializers import VehicleRegistrationSerializer
 
 from vehicles.models import Vehicle
+from core.schemas import MessageSerializer
 
 
 class RegistrationView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["Registrations"],
+        summary="Submit vehicle registration",
+        description=(
+            "Submit a vehicle for registration. Requires:\n"
+            "- Vehicle must belong to the user\n"
+            "- All three documents (RC, DL, COLLEGE_ID) must have `ocr_status = COMPLETED`\n"
+            "- No existing registration for this vehicle\n\n"
+            "Registration is created with `status = PENDING`. Admin reviews and approves/rejects."
+        ),
+        request={"application/json": {"type": "object", "properties": {"vehicle": {"type": "integer", "description": "Vehicle ID"}}, "required": ["vehicle"]}},
+        responses={
+            201: OpenApiResponse(response=VehicleRegistrationSerializer, description="Registration submitted"),
+            400: OpenApiResponse(response=MessageSerializer, description="Validation failed or already submitted"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+            404: OpenApiResponse(response=MessageSerializer, description="Vehicle not found"),
+        },
+    )
     def post(self, request):
 
         vehicle_id = request.data.get("vehicle")
@@ -62,6 +84,15 @@ class RegistrationView(APIView):
             status=status.HTTP_201_CREATED
         )
 
+    @extend_schema(
+        tags=["Registrations"],
+        summary="List my registrations",
+        description="Returns all vehicle registrations submitted by the authenticated user.",
+        responses={
+            200: OpenApiResponse(response=VehicleRegistrationSerializer(many=True), description="List of registrations"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+        },
+    )
     def get(self, request):
 
         registrations = VehicleRegistration.objects.filter(

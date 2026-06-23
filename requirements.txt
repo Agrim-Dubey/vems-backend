@@ -12,3 +12,4 @@ sqlparse==0.5.5
 pytesseract
 pdf2image
 Pillow
+drf-spectacular

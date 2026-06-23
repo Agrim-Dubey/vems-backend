@@ -1,11 +1,19 @@
 from django.utils import timezone
 from django.core.mail import send_mail
 
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
 from core.permissions import IsAdminUser
+from core.schemas import (
+    MessageSerializer,
+    DashboardStatsSerializer,
+    AdminRegistrationSerializer,
+    RejectRequestSerializer,
+)
 
 from registrations.models import VehicleRegistration
 from registrations.serializers import VehicleRegistrationSerializer
@@ -20,6 +28,16 @@ class DashboardStatsView(APIView):
 
     permission_classes = [IsAdminUser]
 
+    @extend_schema(
+        tags=["Admin"],
+        summary="Dashboard stats",
+        description="Returns count of PENDING, APPROVED, and REJECTED registrations.",
+        responses={
+            200: OpenApiResponse(response=DashboardStatsSerializer, description="Stats"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+            403: OpenApiResponse(response=MessageSerializer, description="Not an admin"),
+        },
+    )
     def get(self, request):
 
         return Response({
@@ -30,10 +48,28 @@ class DashboardStatsView(APIView):
 
 
 class AllRegistrationsView(APIView):
-    """List all registrations, optionally filtered by status."""
 
     permission_classes = [IsAdminUser]
 
+    @extend_schema(
+        tags=["Admin"],
+        summary="List all registrations",
+        description="Returns all registrations. Optionally filter by status using `?status=PENDING|APPROVED|REJECTED`.",
+        parameters=[
+            OpenApiParameter(
+                name="status",
+                description="Filter by status: PENDING, APPROVED, or REJECTED",
+                required=False,
+                type=str,
+                enum=["PENDING", "APPROVED", "REJECTED"],
+            )
+        ],
+        responses={
+            200: OpenApiResponse(response=AdminRegistrationSerializer(many=True), description="List of registrations"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+            403: OpenApiResponse(response=MessageSerializer, description="Not an admin"),
+        },
+    )
     def get(self, request):
 
         status_filter = request.GET.get("status")
@@ -65,10 +101,20 @@ class AllRegistrationsView(APIView):
 
 
 class RegistrationDetailView(APIView):
-    """Full detail for one registration: user, vehicle, documents + OCR data."""
 
     permission_classes = [IsAdminUser]
 
+    @extend_schema(
+        tags=["Admin"],
+        summary="Registration detail",
+        description="Full detail for one registration including user info, vehicle data, and all uploaded documents with OCR data.",
+        responses={
+            200: OpenApiResponse(description="Registration detail with documents"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+            403: OpenApiResponse(response=MessageSerializer, description="Not an admin"),
+            404: OpenApiResponse(response=MessageSerializer, description="Registration not found"),
+        },
+    )
     def get(self, request, registration_id):
 
         registration = VehicleRegistration.objects.select_related(
@@ -103,6 +149,17 @@ class ApproveRegistrationView(APIView):
 
     permission_classes = [IsAdminUser]
 
+    @extend_schema(
+        tags=["Admin"],
+        summary="Approve registration",
+        description="Approve a vehicle registration. Sends approval email to the student.",
+        responses={
+            200: OpenApiResponse(response=MessageSerializer, description="Registration approved"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+            403: OpenApiResponse(response=MessageSerializer, description="Not an admin"),
+            404: OpenApiResponse(response=MessageSerializer, description="Registration not found"),
+        },
+    )
     def post(self, request, registration_id):
 
         registration = VehicleRegistration.objects.filter(
@@ -141,6 +198,19 @@ class RejectRegistrationView(APIView):
 
     permission_classes = [IsAdminUser]
 
+    @extend_schema(
+        tags=["Admin"],
+        summary="Reject registration",
+        description="Reject a vehicle registration with a reason. Sends rejection email to the student.",
+        request=RejectRequestSerializer,
+        responses={
+            200: OpenApiResponse(response=MessageSerializer, description="Registration rejected"),
+            400: OpenApiResponse(response=MessageSerializer, description="Reason is required"),
+            401: OpenApiResponse(response=MessageSerializer, description="Unauthenticated"),
+            403: OpenApiResponse(response=MessageSerializer, description="Not an admin"),
+            404: OpenApiResponse(response=MessageSerializer, description="Registration not found"),
+        },
+    )
     def post(self, request, registration_id):
 
         reason = request.data.get("reason")

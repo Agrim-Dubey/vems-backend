@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-     'core',
+    'drf_spectacular',
+    'core',
      'users',
      'accounts',
      "documents",
@@ -122,6 +123,37 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler",
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "VEMS API",
+    "DESCRIPTION": (
+        "Vehicle Entry Management System — AKGEC Campus Security\n\n"
+        "## Authentication\n"
+        "Most endpoints require a JWT access token. Obtain one from `POST /api/auth/login/` "
+        "and pass it as: `Authorization: Bearer <access_token>`\n\n"
+        "## Roles\n"
+        "- **USER** — Students registering vehicles\n"
+        "- **STAFF** — Security guards verifying vehicles at gate\n"
+        "- **ADMIN** — Admin dashboard (blocked from `/api/auth/me/`)\n\n"
+        "## Public Endpoints\n"
+        "- `GET /api/search/vehicle/` — No auth required"
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SORT_OPERATIONS": False,
+    "TAGS": [
+        {"name": "Auth", "description": "Registration, login, and token management"},
+        {"name": "Profile", "description": "User profile management"},
+        {"name": "Vehicles", "description": "Vehicle CRUD"},
+        {"name": "Documents", "description": "Document upload and management"},
+        {"name": "OCR", "description": "OCR processing on uploaded documents"},
+        {"name": "Registrations", "description": "Vehicle registration submission and status"},
+        {"name": "Search", "description": "Public vehicle search endpoint"},
+        {"name": "Admin", "description": "Admin dashboard — requires ADMIN role"},
     ],
 }
 # Internationalization
