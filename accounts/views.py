@@ -138,6 +138,12 @@ class MeView(APIView):
 
     def get(self, request):
 
+        if request.user.role == "ADMIN":
+            return Response(
+                {"message": "Access denied."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         return Response({
             "id": request.user.id,
             "email": request.user.email,
