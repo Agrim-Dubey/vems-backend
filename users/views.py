@@ -23,7 +23,7 @@ class ProfileView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        return Response(UserProfileSerializer(profile).data)
+        return Response(UserProfileSerializer(profile, context={'request': request}).data)
 
     def post(self, request):
 
@@ -45,7 +45,7 @@ class ProfileView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return Response(serializer.data)
+        return Response(UserProfileSerializer(serializer.instance, context={'request': request}).data)
 
     def patch(self, request):
 
@@ -73,4 +73,4 @@ class ProfileView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return Response(serializer.data)
+        return Response(UserProfileSerializer(serializer.instance, context={'request': request}).data)
