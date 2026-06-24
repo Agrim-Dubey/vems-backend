@@ -10,10 +10,9 @@ ALLOWED_MIME_TYPES = {
     "image/png",
     "image/webp",
     "application/pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".pdf", ".docx"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".pdf"}
 
 
 class UserDocumentSerializer(serializers.ModelSerializer):
@@ -40,14 +39,14 @@ class UserDocumentSerializer(serializers.ModelSerializer):
         content_type = getattr(file, "content_type", "")
         if content_type not in ALLOWED_MIME_TYPES:
             raise serializers.ValidationError(
-                "Invalid file type. Allowed: JPG, PNG, WEBP, PDF, DOCX."
+                "Invalid file type. Allowed: JPG, PNG, WEBP, PDF."
             )
 
         import os
         ext = os.path.splitext(file.name)[1].lower()
         if ext not in ALLOWED_EXTENSIONS:
             raise serializers.ValidationError(
-                "Invalid file extension. Allowed: .jpg, .jpeg, .png, .webp, .pdf, .docx."
+                "Invalid file extension. Allowed: .jpg, .jpeg, .png, .webp, .pdf."
             )
 
         return file

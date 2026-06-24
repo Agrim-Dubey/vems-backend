@@ -23,7 +23,7 @@ class SetPasswordSerializer(serializers.Serializer):
 
     email = serializers.EmailField()
 
-    password = serializers.CharField()
+    password = serializers.CharField(min_length=8)
 
     confirm_password = serializers.CharField()
 
@@ -63,7 +63,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
 class ResetPasswordSerializer(serializers.Serializer):
 
     email = serializers.EmailField()
-    password = serializers.CharField()
+    password = serializers.CharField(min_length=8)
     confirm_password = serializers.CharField()
 
     def validate(self, attrs):

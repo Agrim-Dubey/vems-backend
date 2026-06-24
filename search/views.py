@@ -9,7 +9,7 @@ from registrations.models import VehicleRegistration
 from users.models import UserProfile
 from core.schemas import SearchResultSerializer, MessageSerializer
 from core.permissions import IsStaffUser
-from core.throttles import PublicSearchRateThrottle
+from core.throttles import PublicSearchRateThrottle, StaffSearchRateThrottle
 
 
 class PublicVehicleSearchView(APIView):
@@ -106,6 +106,7 @@ class PublicVehicleSearchView(APIView):
 class StaffVehicleSearchView(APIView):
 
     permission_classes = [IsStaffUser]
+    throttle_classes = [StaffSearchRateThrottle]
 
     @extend_schema(
         tags=["Search"],

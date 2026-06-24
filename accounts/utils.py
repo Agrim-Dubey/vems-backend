@@ -1,21 +1,21 @@
-import random
+import secrets
 import jwt
-import datetime
 import os
-
-
+from datetime import datetime, timedelta, timezone
 
 
 def generate_otp():
-    return str(random.randint(100000, 999999))
+    return str(secrets.randbelow(900000) + 100000)
+
 
 def generate_access_token(user):
 
+    now = datetime.now(timezone.utc)
     payload = {
         "user_id": user.id,
         "email": user.email,
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=15),
-        "iat": datetime.datetime.utcnow(),
+        "exp": now + timedelta(minutes=15),
+        "iat": now,
         "type": "access"
     }
 
@@ -28,10 +28,11 @@ def generate_access_token(user):
 
 def generate_refresh_token(user):
 
+    now = datetime.now(timezone.utc)
     payload = {
         "user_id": user.id,
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7),
-        "iat": datetime.datetime.utcnow(),
+        "exp": now + timedelta(days=7),
+        "iat": now,
         "type": "refresh"
     }
 

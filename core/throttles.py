@@ -19,3 +19,8 @@ class UploadRateThrottle(UserRateThrottle):
 class PublicSearchRateThrottle(AnonRateThrottle):
     """60 searches per minute per IP — guards scan frequently."""
     scope = "search"
+
+
+class StaffSearchRateThrottle(UserRateThrottle):
+    """120 searches per minute per staff user."""
+    scope = "search"
