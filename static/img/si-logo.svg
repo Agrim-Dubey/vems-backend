@@ -31,12 +31,15 @@
 	#logo-group{
 		transform-box: fill-box;
 		transform-origin: center;
-		animation: spin 4s linear 3700ms infinite;
+		animation: spin 1.5s ease-in-out 3700ms 1 forwards;
 	}
 
 	@keyframes HrGZnGfU_draw_0{13.51%{stroke-dashoffset:1321;}40.54%{stroke-dashoffset:0;}100%{stroke-dashoffset:0;fill:#3F95E9;}}
 	@keyframes HrGZnGfU_draw_1{20.27%{stroke-dashoffset:1211;}47.30%{stroke-dashoffset:0;}100%{stroke-dashoffset:0;fill:#040404;}}
 	@keyframes HrGZnGfU_draw_2{27.03%{stroke-dashoffset:257;}54.05%{stroke-dashoffset:0;}100%{stroke-dashoffset:0;fill:#040404;}}
-	@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+	@keyframes spin{
+		from{transform:perspective(400px) rotateY(0deg);}
+		to{transform:perspective(400px) rotateY(360deg);}
+	}
 </style>
 </svg>
