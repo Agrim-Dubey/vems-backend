@@ -226,6 +226,8 @@ STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
 CSRF_TRUSTED_ORIGINS = [
     "http://vems.akgec.ac.in",
     "https://vems.akgec.ac.in",
@@ -236,10 +238,12 @@ AUTH_USER_MODEL = "accounts.User"
 JAZZMIN_SETTINGS = {
     "site_title": "VEMS Admin",
     "site_header": "VEMS",
-    "site_brand": "VEMS",
-    "site_logo": None,
+    "site_brand": "Software Incubator",
+    "site_logo": "img/si-logo.svg",
+    "site_logo_classes": "img-circle elevation-3",
+    "site_icon": "img/si-logo.svg",
     "welcome_sign": "AKGEC Vehicle Entry Management System",
-    "copyright": "SDC-SI, AKGEC",
+    "copyright": "Software Development Centre — Software Incubator, AKGEC",
     "search_model": ["accounts.User", "vehicles.Vehicle", "registrations.VehicleRegistration"],
     "topmenu_links": [
         {"name": "Dashboard", "url": "admin:index", "permissions": ["auth.view_user"]},
