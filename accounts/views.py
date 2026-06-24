@@ -26,6 +26,7 @@ from accounts.serializers import (
     LoginSerializer
 )
 from users.models import UserProfile
+from core.throttles import OTPRateThrottle, LoginRateThrottle
 from core.schemas import (
     MessageSerializer,
     TokenResponseSerializer,
@@ -39,6 +40,7 @@ class RegisterView(APIView):
 
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [OTPRateThrottle]
 
     @extend_schema(
         tags=["Auth"],
@@ -261,6 +263,7 @@ class LoginView(APIView):
 
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [LoginRateThrottle]
 
     @extend_schema(
         tags=["Auth"],

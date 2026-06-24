@@ -10,6 +10,7 @@ from documents.models import UserDocument
 from documents.serializers import UserDocumentSerializer
 from ocr.services import process_document
 from core.schemas import MessageSerializer
+from core.throttles import UploadRateThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ _DOCUMENT_EXAMPLE = {
 class DocumentUploadView(APIView):
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [UploadRateThrottle]
 
     @extend_schema(
         tags=["Documents"],
@@ -85,7 +87,7 @@ class DocumentUploadView(APIView):
 
         document.save(update_fields=["extracted_data", "ocr_status"])
 
-        return Response(UserDocumentSerializer(document).data)
+        return Response(UserDocumentSerializer(document, context={"request": request}).data)
 
     @extend_schema(
         tags=["Documents"],
