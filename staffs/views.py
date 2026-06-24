@@ -204,7 +204,7 @@ class RegistrationDetailView(APIView):
                 "email": registration.user.email,
             },
             "vehicle": VehicleSerializer(registration.vehicle).data,
-            "documents": UserDocumentSerializer(documents, many=True).data,
+            "documents": UserDocumentSerializer(documents, many=True, context={"request": request}).data,
         })
 
 
@@ -241,6 +241,12 @@ class ApproveRegistrationView(APIView):
             return Response(
                 {"message": "Registration not found"},
                 status=status.HTTP_404_NOT_FOUND
+            )
+
+        if registration.status != "PENDING":
+            return Response(
+                {"message": f"Registration is already {registration.status.lower()}"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         registration.status = "APPROVED"
@@ -319,6 +325,12 @@ class RejectRegistrationView(APIView):
             return Response(
                 {"message": "Registration not found"},
                 status=status.HTTP_404_NOT_FOUND
+            )
+
+        if registration.status != "PENDING":
+            return Response(
+                {"message": f"Registration is already {registration.status.lower()}"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         registration.status = "REJECTED"
