@@ -14,7 +14,7 @@ from accounts.utils import (
     generate_access_token,
     generate_refresh_token
 )
-from .serializers import SetPasswordSerializer
+from .serializers import SetPasswordSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -454,3 +454,115 @@ class RefreshTokenView(APIView):
         access_token = generate_access_token(user)
 
         return Response({"access_token": access_token})
+
+
+class ForgotPasswordView(APIView):
+
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [OTPRateThrottle]
+
+    @extend_schema(
+        tags=["Auth"],
+        summary="Forgot password — send OTP",
+        description="Send a password reset OTP to the registered email. User must already have an account.",
+        request=ForgotPasswordSerializer,
+        responses={
+            200: OpenApiResponse(response=MessageSerializer, description="OTP sent"),
+            400: OpenApiResponse(response=MessageSerializer, description="Email not registered"),
+        },
+        examples=[
+            OpenApiExample(
+                "Request",
+                value={"email": "student24154001@akgec.ac.in"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Success",
+                value={"message": "OTP sent successfully"},
+                response_only=True,
+                status_codes=["200"],
+            ),
+        ],
+    )
+    def post(self, request):
+
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        otp = generate_otp()
+
+        EmailOTP.objects.filter(email=email).delete()
+        EmailOTP.objects.create(email=email, otp=otp, is_verified=False)
+
+        send_mail(
+            "VEMS — Password Reset OTP",
+            f"Your password reset OTP is {otp}. It expires in 10 minutes.",
+            None,
+            [email]
+        )
+
+        return Response({"message": "OTP sent successfully"})
+
+
+class ResetPasswordView(APIView):
+
+    authentication_classes = []
+    permission_classes = []
+
+    @extend_schema(
+        tags=["Auth"],
+        summary="Reset password",
+        description="Set a new password after OTP is verified via `POST /api/auth/verify-otp/`.",
+        request=ResetPasswordSerializer,
+        responses={
+            200: OpenApiResponse(response=MessageSerializer, description="Password updated"),
+            400: OpenApiResponse(response=MessageSerializer, description="OTP not verified or passwords don't match"),
+        },
+        examples=[
+            OpenApiExample(
+                "Request",
+                value={
+                    "email": "student24154001@akgec.ac.in",
+                    "password": "NewPass@123",
+                    "confirm_password": "NewPass@123",
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Success",
+                value={"message": "Password updated successfully"},
+                response_only=True,
+                status_codes=["200"],
+            ),
+        ],
+    )
+    def post(self, request):
+
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        password = serializer.validated_data["password"]
+
+        otp_obj = EmailOTP.objects.filter(email=email, is_verified=True).first()
+        if not otp_obj:
+            return Response(
+                {"message": "OTP verification required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = User.objects.filter(email=email).first()
+        if not user:
+            return Response(
+                {"message": "User not found"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.password = make_password(password)
+        user.save(update_fields=["password"])
+
+        otp_obj.delete()
+
+        return Response({"message": "Password updated successfully"})

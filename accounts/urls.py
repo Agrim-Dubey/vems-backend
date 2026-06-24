@@ -7,6 +7,8 @@ from accounts.views import (
     MeView,
     SetPasswordView,
     RefreshTokenView,
+    ForgotPasswordView,
+    ResetPasswordView,
 )
 
 urlpatterns = [
@@ -16,4 +18,6 @@ urlpatterns = [
     path("login/", LoginView.as_view()),
     path("refresh/", RefreshTokenView.as_view()),
     path("me/", MeView.as_view()),
+    path("forgot-password/", ForgotPasswordView.as_view()),
+    path("forgot-password/reset/", ResetPasswordView.as_view()),
 ]

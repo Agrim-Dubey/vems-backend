@@ -48,3 +48,27 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
     password = serializers.CharField(write_only=True)
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("No account found with this email")
+        return value
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+
+    email = serializers.EmailField()
+    password = serializers.CharField()
+    confirm_password = serializers.CharField()
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({
+                "confirm_password": ["Passwords do not match"]
+            })
+        return attrs
