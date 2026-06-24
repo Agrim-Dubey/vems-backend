@@ -76,7 +76,7 @@ class ProcessOCRView(APIView):
             document.extracted_data = extracted_data
             document.ocr_status = "COMPLETED"
             document.save(update_fields=["extracted_data", "ocr_status"])
-            return Response(UserDocumentSerializer(document).data)
+            return Response(UserDocumentSerializer(document, context={"request": request}).data)
 
         except Exception:
             document.ocr_status = "FAILED"
