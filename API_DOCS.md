@@ -1,7 +1,7 @@
 # VEMS Backend — API Documentation
 
 > **For:** Flutter Developer (Shreeyansh)
-> **Base URL:** `http://vems.akgec.ac.in`
+> **Base URL:** `https://vems.akgec.ac.in`
 > **Content-Type:** `application/json` for all requests **except** file uploads (use `multipart/form-data`)
 
 ---
@@ -17,7 +17,7 @@
 7. [Vehicle Endpoints](#7-vehicle-endpoints)
 8. [Document Endpoints](#8-document-endpoints)
 9. [Registration Endpoints](#9-registration-endpoints)
-10. [Search Endpoint](#10-search-endpoint-no-auth-required)
+10. [Search Endpoints](#10-search-endpoints)
 11. [Admin Endpoints](#11-admin-endpoints)
 12. [Error Reference](#12-error-reference)
 
@@ -322,6 +322,74 @@ GET /api/auth/me/
 
 ---
 
+### Forgot Password — Send OTP
+
+Sends a password reset OTP to the email. The account must already exist. Uses the same `POST /api/auth/verify-otp/` endpoint to verify the OTP, then calls reset below.
+
+```
+POST /api/auth/forgot-password/
+```
+
+**Body:**
+
+```json
+{
+  "email": "2100123@akgec.ac.in"
+}
+```
+
+**Response `200`:**
+
+```json
+{
+  "message": "OTP sent successfully"
+}
+```
+
+**Errors:**
+
+| HTTP | `message` | Cause |
+|---|---|---|
+| `400` | `"Email not registered"` | No account found for this email |
+
+---
+
+### Forgot Password — Reset Password
+
+Sets a new password after OTP has been verified via `POST /api/auth/verify-otp/`. Same OTP verification step as registration — call `verify-otp` first, then call this.
+
+```
+POST /api/auth/forgot-password/reset/
+```
+
+**Body:**
+
+```json
+{
+  "email": "2100123@akgec.ac.in",
+  "password": "NewPassword@123",
+  "confirm_password": "NewPassword@123"
+}
+```
+
+**Response `200`:**
+
+```json
+{
+  "message": "Password updated successfully"
+}
+```
+
+**Errors:**
+
+| HTTP | `message` | Cause |
+|---|---|---|
+| `400` | `"OTP verification required"` | `verify-otp` was not called first |
+| `400` | `"Passwords do not match"` | Passwords differ |
+| `400` | `"User not found"` | Account does not exist |
+
+---
+
 ## 6. Profile Endpoints
 
 ### Create / Update Profile
@@ -501,7 +569,7 @@ Content-Type: multipart/form-data
 | Field | Type | Allowed Values |
 |---|---|---|
 | `document_type` | string | `"RC"`, `"DL"`, `"COLLEGE_ID"` |
-| `file` | file | image (jpg/png) or PDF |
+| `file` | file | JPG, PNG, WEBP, or PDF — max 5MB |
 
 **Response `200`:**
 
@@ -744,9 +812,11 @@ The user also receives an **email** automatically when the admin approves or rej
 
 ---
 
-## 10. Search Endpoint (No Auth Required)
+## 10. Search Endpoints
 
-Used at the campus gate after scanning or manually entering a vehicle number plate. Returns whether the vehicle has an approved registration. No login or token required — security guards can use this directly.
+### Public Search (No Auth Required)
+
+Used at the campus gate after scanning or manually entering a vehicle number plate. Returns whether the vehicle has an approved registration. No login or token required.
 
 ```
 GET /api/search/vehicle/?vehicle_number=UP14AB1234
@@ -785,6 +855,56 @@ No auth needed
 HTTP `400` when the param is missing. HTTP `200` for all other cases regardless of `verified` value.
 
 Show a clear **green screen** for `"verified": true` and **red screen** for `"verified": false`.
+
+---
+
+### Staff Search (Authenticated)
+
+Extended search for logged-in STAFF users. Returns full student details including photo, email, and student number. Use this if the staff screen needs to show more than just verified/not-verified.
+
+```
+GET /api/search/vehicle/staff/?vehicle_number=UP14AB1234
+🔒 Requires: Authorization header (STAFF or ADMIN role)
+```
+
+**Response — vehicle is approved:**
+
+```json
+{
+  "verified": true,
+  "vehicle_number": "UP14AB1234",
+  "vehicle_type": "BIKE",
+  "vehicle_model": "Honda Shine",
+  "vehicle_color": "Black",
+  "rc_number": "RC1234567890",
+  "owner_name": "Rahul Verma",
+  "registration_status": "APPROVED",
+  "submitted_at": "2026-06-19T11:00:00Z",
+  "student": {
+    "email": "2100123@akgec.ac.in",
+    "student_number": "2100123",
+    "first_name": "Rahul",
+    "last_name": "Verma",
+    "photo": "https://vems.akgec.ac.in/media/profile_photos/rahul.jpg"
+  }
+}
+```
+
+**Response — not found or not approved:**
+
+```json
+{
+  "verified": false
+}
+```
+
+**Errors:**
+
+| HTTP | `message` | Cause |
+|---|---|---|
+| `400` | `"vehicle_number param required"` | Query param missing |
+| `401` | — | No token or expired token |
+| `403` | `"Staff or admin access required"` | User does not have STAFF role |
 
 ---
 
@@ -980,6 +1100,7 @@ POST /api/admin/registrations/<id>/approve/
 
 | HTTP | `message` | Cause |
 |---|---|---|
+| `400` | `"Registration is already approved"` | Registration is not in PENDING state |
 | `404` | `"Registration not found"` | ID does not exist |
 | `403` | `"Admin access required"` | Token is not an admin token |
 
@@ -1015,6 +1136,7 @@ POST /api/admin/registrations/<id>/reject/
 | HTTP | Field / `message` | Cause |
 |---|---|---|
 | `400` | `{"reason": ["This field is required."]}` | Reason not provided |
+| `400` | `"Registration is already rejected"` | Registration is not in PENDING state |
 | `404` | `"Registration not found"` | ID does not exist |
 | `403` | `"Admin access required"` | Token is not an admin token |
 
